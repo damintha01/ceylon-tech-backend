@@ -21,6 +21,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // PayHere posts its notification form-encoded
 app.use(cookieParser());
 
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "Ceylon Tech backend API" });
+});
+
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
