@@ -21,6 +21,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // PayHere posts its notification form-encoded
 app.use(cookieParser());
 
+let dbPromise;
+app.use(async (req, res, next) => {
+  if (!process.env.VERCEL) return next();
+  try {
+    dbPromise = dbPromise || mongoose.connect(process.env.MONGODB_URI);
+    await dbPromise;
+    next();
+  } catch (error) {
+    dbPromise = undefined;
+    console.error("MongoDB connection error:", error.message);
+    res.status(503).json({ error: "Database unavailable" });
+  }
+});
+
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Ceylon Tech backend API" });
 });
@@ -41,17 +55,19 @@ app.use("/api/payments", paymentRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+module.exports = app;
 
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("Connected to MongoDB");
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+if (!process.env.VERCEL) {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log("Connected to MongoDB");
+      app.listen(process.env.PORT, () => {
+        console.log(`Server running on port ${process.env.PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error("MongoDB connection error:", error.message);
+      process.exit(1);
     });
-  })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error.message);
-    process.exit(1);
-  });
+}
